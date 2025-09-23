@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './AdminDashboard.css';
-import PatientManagement from './components/PatientManagement'; // Adjust path as needed
-import DoctorManagement from './components/DoctorManagement';   // Adjust path as needed
+import PatientManagement from './components/PatientManagement';
+import DoctorManagement from './components/DoctorManagement';   
 import AppointmentManagement from './components/AppointmentManagement';
 import DepartmentManagement from './components/DepartmentManagement';
 
@@ -20,7 +20,7 @@ const AdminDashboard = ({ onLogout }) => {
     const email = localStorage.getItem('userEmail');
     setUserEmail(email || 'Unknown User');
     loadStatistics();
-  }, [activeTab]); // Trigger on tab change to refresh stats
+  }, [activeTab]); 
 
   const loadStatistics = async () => {
     setLoading(true);
@@ -29,7 +29,6 @@ const AdminDashboard = ({ onLogout }) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token found');
 
-      // Fetch patients
       const patientsResponse = await fetch('http://localhost:5000/api/patients', {
         method: 'GET',
         headers: {
@@ -42,7 +41,6 @@ const AdminDashboard = ({ onLogout }) => {
       const patientsList = Array.isArray(patientsData) ? patientsData : [];
       setPatients(patientsList);
 
-      // Fetch doctors
       const doctorsResponse = await fetch('http://localhost:5000/api/doctors', {
         method: 'GET',
         headers: {
@@ -55,7 +53,6 @@ const AdminDashboard = ({ onLogout }) => {
       const doctorsList = Array.isArray(doctorsData) ? doctorsData : [];
       setDoctors(doctorsList);
 
-      // Fetch appointments
       const appointmentsResponse = await fetch('http://localhost:5000/api/appointments', {
         method: 'GET',
         headers: {
@@ -68,7 +65,6 @@ const AdminDashboard = ({ onLogout }) => {
       const appointmentsList = Array.isArray(appointmentsData) ? appointmentsData : Array.isArray(appointmentsData.data) ? appointmentsData.data : [];
       setAppointments(appointmentsList);
 
-      // Fetch departments
       const departmentsResponse = await fetch('http://localhost:5000/api/departments', {
         method: 'GET',
         headers: {
@@ -81,8 +77,7 @@ const AdminDashboard = ({ onLogout }) => {
       const departmentsList = Array.isArray(departmentsData.data) ? departmentsData.data : Array.isArray(departmentsData) ? departmentsData : [];
       setDepartments(departmentsList);
 
-      // Calculate statistics
-      const today = new Date().toISOString().split('T')[0]; // Current date: 2025-09-22
+      const today = new Date().toISOString().split('T')[0]; 
       const stats = {
         totalPatients: patientsList.length,
         totalDoctors: doctorsList.length,
@@ -100,7 +95,6 @@ const AdminDashboard = ({ onLogout }) => {
     }
   };
 
-  // Fetch patients (for management tab)
   const fetchPatients = async () => {
     setLoading(true);
     setError(null);
@@ -128,7 +122,6 @@ const AdminDashboard = ({ onLogout }) => {
     }
   };
 
-  // Fetch departments
   const fetchDepartments = async () => {
     setLoading(true);
     setError(null);
@@ -157,7 +150,6 @@ const AdminDashboard = ({ onLogout }) => {
     }
   };
 
-  // Fetch doctors
   const fetchDoctors = async () => {
     setLoading(true);
     setError(null);
@@ -185,7 +177,6 @@ const AdminDashboard = ({ onLogout }) => {
     }
   };
 
-  // Fetch appointments
   const fetchAppointments = async () => {
     setLoading(true);
     setError(null);

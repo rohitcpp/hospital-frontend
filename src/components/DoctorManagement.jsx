@@ -42,17 +42,16 @@ const loadDoctors = async () => {
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const data = await res.json();
     const doctorsRaw = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
-    // Map backend fields to frontend fields
     const doctors = doctorsRaw.map(doc => ({
       id: doc._id,
       name: doc.name,
       email: doc.email,
-      phone: doc.phno, // map phno to phone
-      specialization: doc.spec, // map spec to specialization
-      departmentId: doc.dept, // map dept to departmentId (or use department name directly)
-      experience: doc.exp, // map exp to experience
-      qualification: doc.qual, // map qual to qualification
-      status: (doc.status || '').toLowerCase(), // normalize status
+      phone: doc.phno, 
+      specialization: doc.spec, 
+      departmentId: doc.dept, 
+      experience: doc.exp, 
+      qualification: doc.qual, 
+      status: (doc.status || '').toLowerCase(), 
     }));
     setDoctors(doctors);
   } catch (err) {
@@ -61,9 +60,7 @@ const loadDoctors = async () => {
   }
 };
 
-// ...existing code...
 
-  // Load all departments from backend
   const loadDepartments = async () => {
   try {
     const token = localStorage.getItem('token');
@@ -76,7 +73,6 @@ const loadDoctors = async () => {
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const data = await res.json();
-    // If your backend returns { success, data: [...] }
     setDepartments(Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : []);
   } catch (err) {
     console.error('Error fetching departments:', err);
@@ -116,8 +112,7 @@ const loadDoctors = async () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Submit form: Add or Update
-  // ...existing code...
+ 
 
 const handleSubmit = async (e) => {
   e.preventDefault();
@@ -130,12 +125,12 @@ const handleSubmit = async (e) => {
   const doctorData = {
   name: formData.name,
   email: formData.email,
-  phno: formData.phone.replace(/\D/g, '').slice(-10), // ensure 10 digits
+  phno: formData.phone.replace(/\D/g, '').slice(-10), 
   spec: formData.specialization,
-  dept: selectedDept ? selectedDept._id : '', // must be ObjectId
+  dept: selectedDept ? selectedDept._id : '', 
   exp: formData.experience,
   qual: formData.qualification,
-  status: formData.status === 'active' ? 'Active' : 'Inactive', // match enum
+  status: formData.status === 'active' ? 'Active' : 'Inactive', 
 };
 
 
@@ -178,8 +173,6 @@ const handleSubmit = async (e) => {
   }
 };
 
-// ...existing code...
-
   const handleEdit = (doctor) => {
     setEditingDoctor(doctor);
     setFormData({
@@ -207,7 +200,7 @@ const handleSubmit = async (e) => {
         });
         if (!res.ok) throw new Error(`Failed to delete doctor, status: ${res.status}`);
         await loadDoctors();
-        if (onDataChange) onDataChange(); // Notify parent only after delete
+        if (onDataChange) onDataChange(); 
       } catch (err) {
         console.error('Error deleting doctor:', err);
       }
@@ -232,12 +225,10 @@ const handleSubmit = async (e) => {
 
 
 
-// ...existing code...
 const getDepartmentName = (departmentId) => {
   if (!departmentId) return 'Unknown';
   if (!Array.isArray(departments)) return 'Unknown';
 
-  // Find department by _id
   const department = departments.find(
     dept => String(dept._id || dept.id) === String(departmentId)
   );

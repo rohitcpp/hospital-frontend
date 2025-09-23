@@ -5,12 +5,10 @@ const Dashboard = ({ onLogout }) => {
   const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
-    // Check if user is authenticated
     const isAuthenticated = localStorage.getItem('isAuthenticated');
     const email = localStorage.getItem('userEmail');
     
     if (!isAuthenticated) {
-      // Redirect to login if not authenticated
       window.location.href = '/';
       return;
     }

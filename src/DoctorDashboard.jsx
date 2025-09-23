@@ -32,7 +32,7 @@ const DoctorDashboard = ({ onLogout }) => {
   const [userRole, setUserRole] = useState('');
   const [patients, setPatients] = useState([]);
   const [appointments, setAppointments] = useState([]);
-  const [departments, setDepartments] = useState([]); // New state for departments
+  const [departments, setDepartments] = useState([]); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -46,7 +46,7 @@ const DoctorDashboard = ({ onLogout }) => {
     if (token) {
       fetchPatients(token);
       fetchAppointments(token);
-      fetchDepartments(token); // Fetch departments
+      fetchDepartments(token); 
     } else {
       console.warn('No token found, login may be required');
       setError('No authentication token found. Please log in again.');
@@ -112,7 +112,7 @@ const DoctorDashboard = ({ onLogout }) => {
     try {
       const currentToken = token || localStorage.getItem('token');
       if (!currentToken) throw new Error('No authentication token found');
-      const response = await fetch('http://localhost:5000/api/departments', { // Assume this endpoint exists
+      const response = await fetch('http://localhost:5000/api/departments', { 
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +147,7 @@ const DoctorDashboard = ({ onLogout }) => {
     localStorage.removeItem('userRole');
     setPatients([]);
     setAppointments([]);
-    setDepartments([]); // Clear departments on logout
+    setDepartments([]); 
     setError(null);
     setActiveTab('dashboard');
   };
@@ -157,7 +157,7 @@ const DoctorDashboard = ({ onLogout }) => {
     if (token) {
       fetchPatients(token);
       fetchAppointments(token);
-      fetchDepartments(token); // Retry fetching departments
+      fetchDepartments(token); 
     } else {
       setError('No authentication token found. Please log in again.');
     }

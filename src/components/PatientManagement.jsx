@@ -11,7 +11,7 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
     age: '',
     gender: 'Male',
     address: '',
-    bg: 'A+', // Default to A+ instead of empty string
+    bg: 'A+', 
     emerno: '',
     medical_history: ''
   });
@@ -66,13 +66,13 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
         phno: formData.phno.trim(),
         age: Number(formData.age),
         gender: formData.gender.toLowerCase(),
-        bg: formData.bg || 'A+', // Ensure bg is always included with a default
+        bg: formData.bg || 'A+', 
         address: formData.address?.trim() || undefined,
         emerno: formData.emerno?.trim() || undefined,
         medical_history: formData.medical_history?.trim() || undefined,
       };
 
-      console.log('Submitting patient data:', patientData); // Debug payload
+      console.log('Submitting patient data:', patientData); 
 
       const url = editingPatient
         ? `http://localhost:5000/api/patients/${editingPatient._id}`
@@ -97,7 +97,7 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
       const savedPatient = await response.json();
       console.log("Patient saved successfully:", savedPatient);
 
-      if (onDataChange) onDataChange(token); // Pass token to refresh
+      if (onDataChange) onDataChange(token); 
 
       resetForm();
     } catch (error) {
@@ -133,7 +133,7 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
           },
         });
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        onDataChange(token); // Refresh patient list
+        onDataChange(token); 
       } catch (error) {
         console.error('Error deleting patient:', error.message);
         setErrors({ general: `Failed to delete patient: ${error.message}` });
@@ -149,7 +149,7 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
       age: '',
       gender: 'Male',
       address: '',
-      bg: 'A+', // Reset to default
+      bg: 'A+', 
       emerno: '',
       medical_history: ''
     });
@@ -367,7 +367,7 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
                     <button 
                       className="delete-button"
                       onClick={() => handleDelete(patient._id)}
-                      disabled={userRole === 'doctor'} // Disable for doctor role
+                      disabled={userRole === 'doctor'} 
                     >
                       🗑️
                     </button>

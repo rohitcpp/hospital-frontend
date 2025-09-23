@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './Management.css';
 
-// Error Boundary Component
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
 
@@ -46,7 +45,6 @@ const AppointmentManagement = ({ onDataChange }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Function to get the JWT token from localStorage
   const getAuthToken = () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -55,7 +53,6 @@ const AppointmentManagement = ({ onDataChange }) => {
     return token;
   };
 
-  // Create axios instance with base URL and headers
   const axiosInstance = axios.create({
     baseURL: '/api',
     headers: {
@@ -63,7 +60,6 @@ const AppointmentManagement = ({ onDataChange }) => {
     },
   });
 
-  // Add request interceptor to include Authorization header
   axiosInstance.interceptors.request.use(
     (config) => {
       const token = getAuthToken();
@@ -79,7 +75,6 @@ const AppointmentManagement = ({ onDataChange }) => {
     }
   );
 
-  // Add response interceptor to handle errors
   axiosInstance.interceptors.response.use(
     (response) => {
       console.log('Response from', response.config.url, 'at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', response.data);

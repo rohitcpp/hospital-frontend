@@ -1,11 +1,9 @@
-// Data Management System for Healthcare Management
 class DataManager {
   constructor() {
     this.initializeData();
   }
 
   initializeData() {
-    // Initialize with sample data if not exists
     if (!localStorage.getItem('healthcare_departments')) {
       const departments = [
         { id: 1, name: 'Cardiology', description: 'Heart and cardiovascular system' },
@@ -142,7 +140,6 @@ class DataManager {
     }
   }
 
-  // Generic CRUD operations
   getData(type) {
     const data = localStorage.getItem(`healthcare_${type}`);
     return data ? JSON.parse(data) : [];
@@ -157,7 +154,6 @@ class DataManager {
     return data.length > 0 ? Math.max(...data.map(item => item.id)) + 1 : 1;
   }
 
-  // Department operations
   getDepartments() {
     return this.getData('departments');
   }
@@ -225,7 +221,6 @@ class DataManager {
     return true;
   }
 
-  // Patient operations
   getPatients() {
     return this.getData('patients');
   }
@@ -260,7 +255,6 @@ class DataManager {
     return true;
   }
 
-  // Appointment operations
   getAppointments() {
     return this.getData('appointments');
   }
@@ -294,7 +288,6 @@ class DataManager {
     return true;
   }
 
-  // Statistics
   getStatistics() {
     return {
       totalPatients: this.getPatients().length,
@@ -310,6 +303,5 @@ class DataManager {
   }
 }
 
-// Create singleton instance
 const dataManager = new DataManager();
 export default dataManager;

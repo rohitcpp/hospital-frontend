@@ -21,7 +21,6 @@ const DepartmentManagement = ({ onDataChange }) => {
     try {
       const token = localStorage.getItem('token');
 
-      // Fetch departments, doctors, appointments in parallel
       const [deptRes, docRes, appRes] = await Promise.all([
         fetch('http://localhost:5000/api/departments', {
           headers: { 'Authorization': token ? `Bearer ${token}` : '' },
@@ -50,7 +49,6 @@ const DepartmentManagement = ({ onDataChange }) => {
       console.log('Fetched doctors (raw):', doctorsArray.map(d => ({ id: d._id, department: d.department })));
       console.log('Fetched appointments (raw):', appointmentsArray.map(a => ({ id: a._id, dept: a.dept })));
 
-      // Attach doctor & appointment counts using department._id
       const enrichedDepartments = departmentsArray.map(dept => {
         const deptId = dept._id;
 
@@ -75,7 +73,7 @@ const DepartmentManagement = ({ onDataChange }) => {
       setDepartments(enrichedDepartments);
     } catch (error) {
       console.error('Error loading departments:', error);
-      setDepartments([]); // Fallback
+      setDepartments([]); 
     }
   };
 

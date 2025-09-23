@@ -10,7 +10,6 @@ import React, { useState, useEffect } from 'react';
     const [userRole, setUserRole] = useState('admin');
 
     useEffect(() => {
-      // Check authentication status on app load
       const authStatus = localStorage.getItem('isAuthenticated');
       const role = localStorage.getItem('userRole') || 'admin';
       if (authStatus === 'true') {
@@ -19,7 +18,6 @@ import React, { useState, useEffect } from 'react';
         setCurrentPage('dashboard');
       }
 
-      // Listen for URL changes (simple routing)
       const handlePopState = () => {
         const path = window.location.pathname;
         if (path === '/dashboard' && authStatus === 'true') {
@@ -31,7 +29,6 @@ import React, { useState, useEffect } from 'react';
 
       window.addEventListener('popstate', handlePopState);
 
-      // Set initial route based on current URL
       const currentPath = window.location.pathname;
       if (currentPath === '/dashboard' && authStatus === 'true') {
         setCurrentPage('dashboard');
@@ -42,16 +39,14 @@ import React, { useState, useEffect } from 'react';
       };
     }, []);
 
-    // Handle successful login
     const handleLoginSuccess = () => {
       setIsAuthenticated(true);
-      const role = localStorage.getItem('userRole') || 'admin'; // Sync userRole
+      const role = localStorage.getItem('userRole') || 'admin'; 
       setUserRole(role);
       setCurrentPage('dashboard');
       window.history.pushState({}, '', '/dashboard');
     };
 
-    // Handle logout
     const handleLogout = () => {
       setIsAuthenticated(false);
       setCurrentPage('login');
