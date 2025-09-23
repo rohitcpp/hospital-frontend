@@ -235,7 +235,7 @@ const DoctorManagement = ({ onDataChange }) => {
 
     if (!validateForm()) return;
 
-    // For updates, send only changed fields
+    
     let doctorData = {};
     if (editingDoctor) {
       if (formData.name.trim() !== editingDoctor.name) doctorData.name = formData.name.trim();
@@ -247,7 +247,7 @@ const DoctorManagement = ({ onDataChange }) => {
       if (formData.qualification.trim() !== editingDoctor.qualification) doctorData.qual = formData.qualification.trim();
       if (formData.status && formData.status.trim() !== editingDoctor.status) doctorData.status = formData.status.trim();
     } else {
-      // For creating a new doctor, send all fields
+  
       doctorData = {
         name: formData.name.trim(),
         email: formData.email.trim(),
@@ -261,7 +261,6 @@ const DoctorManagement = ({ onDataChange }) => {
       };
     }
 
-    // Log the payload for debugging
     console.log('Submitting doctor data:', doctorData);
 
     try {

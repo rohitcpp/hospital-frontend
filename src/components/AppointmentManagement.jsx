@@ -355,7 +355,6 @@ const AppointmentManagement = ({ onDataChange }) => {
         time: formData.time,
         status: formData.status,
         rsv: formData.rsv,
-        // Only include notes if user is a doctor
         notes: userRole === 'doctor' ? formData.notes : editingAppointment?.notes || '',
       };
 
