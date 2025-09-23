@@ -173,7 +173,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                 <span className="checkmark"></span>
                 Remember me
               </label>
-              <a href="#" className="forgot-password">Forgot Password?</a>
+              
             </div>
 
             {errors.submit && <div className="error-message submit-error">{errors.submit}</div>}
@@ -194,9 +194,7 @@ const LoginPage = ({ onLoginSuccess }) => {
             </button>
           </form>
 
-          <div className="login-footer">
-            <p>Don't have an account? <a href="#" className="signup-link">Sign up here</a></p>
-          </div>
+          
         </div>
       </div>
     </div>
