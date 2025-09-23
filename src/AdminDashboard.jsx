@@ -41,7 +41,7 @@ const AdminDashboard = ({ onLogout }) => {
       const patientsList = Array.isArray(patientsData) ? patientsData : [];
       setPatients(patientsList);
 
-      const doctorsResponse = await fetch('http://localhost:5000/api/doctors', {
+      const doctorsResponse = await fetch('http://localhost:5000/api/users/doctors', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -157,7 +157,7 @@ const AdminDashboard = ({ onLogout }) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token found');
 
-      const response = await fetch('http://localhost:5000/api/doctors', {
+      const response = await fetch('http://localhost:5000/api/users/doctors', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

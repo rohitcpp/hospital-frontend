@@ -475,3 +475,8 @@
   font-size: 14px;
   font-weight: 500;
 }
+.warning-badge {
+  color: orange;
+  margin-left: 5px;
+  cursor: help;
+}

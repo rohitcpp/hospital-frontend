@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 import './Management.css';
 
 class ErrorBoundary extends React.Component {
@@ -7,6 +8,10 @@ class ErrorBoundary extends React.Component {
 
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error('ErrorBoundary caught an error:', error, info);
   }
 
   render() {
@@ -41,14 +46,17 @@ const AppointmentManagement = ({ onDataChange }) => {
   });
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [searchTerm, setSearchTerm] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const getAuthToken = () => {
     const token = localStorage.getItem('token');
     if (!token) {
       console.warn('No token found in localStorage at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+      return null;
     }
     return token;
   };
@@ -91,6 +99,9 @@ const AppointmentManagement = ({ onDataChange }) => {
         } else if (error.response.status === 403) {
           setApiError('Forbidden: You do not have permission to perform this action.');
           console.error('403 Error on', url, 'at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', error.response.data);
+        } else if (error.response.status === 400) {
+          setApiError(`Invalid request on ${url}: ${error.response.data.message || 'Bad request'}.`);
+          console.error('400 Error on', url, 'at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', error.response.data);
         } else if (error.response.status === 500) {
           setApiError(`Server error on ${url}: ${error.response.data.message || 'Internal server error'}.`);
           console.error('500 Error on', url, 'at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', error.response.data);
@@ -109,6 +120,27 @@ const AppointmentManagement = ({ onDataChange }) => {
   useEffect(() => {
     if (isAuthenticated) {
       setIsLoading(true);
+      const token = getAuthToken();
+      if (token) {
+        try {
+          const decoded = jwtDecode(token);
+          console.log('Decoded JWT token:', decoded);
+          setUserRole(decoded.role || 'unknown');
+          setCurrentUserId(decoded.id || null);
+        } catch (error) {
+          console.error('Error decoding JWT token at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', error);
+          setApiError('Failed to decode authentication token. Defaulting to restricted access.');
+          setUserRole('unknown');
+          setIsAuthenticated(false);
+          localStorage.removeItem('token');
+        }
+      } else {
+        setApiError('No authentication token found. Please log in.');
+        setIsAuthenticated(false);
+        setIsLoading(false);
+        return;
+      }
+
       Promise.all([
         loadAppointments(),
         loadPatients(),
@@ -132,6 +164,7 @@ const AppointmentManagement = ({ onDataChange }) => {
       setApiError(null);
     } catch (error) {
       console.error('Error fetching appointments at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', error.response?.data || error);
+      setApiError('Failed to load appointments. Check server connection or authentication.');
     }
   };
 
@@ -143,20 +176,32 @@ const AppointmentManagement = ({ onDataChange }) => {
       setApiError(null);
     } catch (error) {
       console.error('Error fetching patients at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', error.response?.data || error);
+      setApiError('Failed to load patients. Check server connection or authentication.');
     }
   };
 
   const loadDoctors = async () => {
     try {
-      const response = await axiosInstance.get('/doctors');
+      const response = await axiosInstance.get('/users/doctors');
       console.log('Doctors response at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', response.data);
       const doctorsData = Array.isArray(response.data) ? response.data : Array.isArray(response.data.data) ? response.data.data : [];
-      if (doctorsData.length === 0) {
-        console.warn('No doctors found in response at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
-      } else if (!Array.isArray(doctorsData)) {
-        console.error('Invalid doctors data structure at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', doctorsData);
+      const validDoctors = doctorsData.filter((doctor) => {
+        const deptId = doctor.dept?._id || doctor.dept;
+        if (!deptId) {
+          console.warn('Skipping doctor with invalid dept:', doctor);
+          return false;
+        }
+        if (userRole === 'doctor' && doctor._id !== currentUserId) {
+          console.warn('Skipping doctor for non-current user:', doctor, 'Current user ID:', currentUserId);
+          return false;
+        }
+        return true;
+      });
+      if (validDoctors.length === 0) {
+        console.warn('No valid doctors found at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+        setApiError('No valid doctors found. Please add doctors with valid departments in Doctor Management.');
       }
-      setDoctors(doctorsData);
+      setDoctors(validDoctors);
       setApiError(null);
     } catch (error) {
       console.error('Error fetching doctors at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', error.response?.data || error);
@@ -166,29 +211,46 @@ const AppointmentManagement = ({ onDataChange }) => {
 
   const loadDoctorsFiltered = async (departmentId) => {
     if (!departmentId) {
-      loadDoctors();
+      await loadDoctors();
       return;
     }
     try {
-      const response = await axiosInstance.get('/doctors', {
+      const response = await axiosInstance.get('/users/doctors', {
         params: { departmentId },
       });
       console.log('Filtered doctors response at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), 'for departmentId', departmentId, ':', response.data);
       const doctorsData = Array.isArray(response.data) ? response.data : Array.isArray(response.data.data) ? response.data.data : [];
-      console.log('Parsed filtered doctors data:', doctorsData); // Debug the parsed data
-      if (doctorsData.length === 0) {
-        console.warn('No doctors found for department', departmentId, 'at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
-        setDoctors((prevDoctors) => (prevDoctors.length > 0 ? prevDoctors : doctorsData));
-      } else if (!Array.isArray(doctorsData)) {
-        console.error('Invalid filtered doctors data structure at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', doctorsData);
-      } else {
-        setDoctors(doctorsData);
+      const validDoctors = doctorsData.filter((doctor) => {
+        const deptId = doctor.dept?._id || doctor.dept;
+        if (!deptId) {
+          console.warn('Skipping doctor with invalid dept:', doctor);
+          return false;
+        }
+        if (deptId.toString() !== departmentId) {
+          console.warn('Skipping doctor with non-matching dept:', doctor, 'Expected dept:', departmentId);
+          return false;
+        }
+        if (userRole === 'doctor' && doctor._id !== currentUserId) {
+          console.warn('Skipping doctor for non-current user:', doctor, 'Current user ID:', currentUserId);
+          return false;
+        }
+        return true;
+      });
+      if (validDoctors.length === 0) {
+        console.warn('No valid doctors found for department', departmentId, 'at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+        setApiError(`No valid doctors available for selected department. Please select another department or add doctors in Doctor Management.`);
       }
+      setDoctors(validDoctors);
       setApiError(null);
     } catch (error) {
       console.error('Error fetching filtered doctors at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), 'for departmentId', departmentId, ':', error.response?.data || error);
-      setApiError(`Failed to load doctors for department ${departmentId}. Check server or authentication.`);
-      setDoctors((prevDoctors) => (prevDoctors.length > 0 ? prevDoctors : []));
+      const errorMessage = error.response?.status === 400
+        ? `Invalid department ID ${departmentId}. Please select a valid department.`
+        : `Failed to load doctors for department ${departmentId}. Check server or authentication.`;
+      setApiError(errorMessage);
+      if (!doctors.length) {
+        await loadDoctors();
+      }
     }
   };
 
@@ -196,19 +258,13 @@ const AppointmentManagement = ({ onDataChange }) => {
     try {
       const response = await axiosInstance.get('/departments');
       console.log('Departments response at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', response.data);
-      const departmentsData = response.data?.data || [];
-      if (Array.isArray(departmentsData)) {
-        setDepartments(departmentsData);
-        if (departmentsData.length === 0) {
-          setApiError('No departments found. Please add departments or contact support.');
-        } else {
-          setApiError(null);
-        }
+      const departmentsData = Array.isArray(response.data) ? response.data : Array.isArray(response.data.data) ? response.data.data : [];
+      if (departmentsData.length === 0) {
+        setApiError('No departments found. Please add departments or contact support.');
       } else {
-        setApiError('Invalid departments data received from server.');
-        setDepartments([]);
-        console.error('Invalid departments data structure:', departmentsData);
+        setApiError(null);
       }
+      setDepartments(departmentsData);
     } catch (error) {
       console.error('Error fetching departments at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', error.response?.data || error);
       setApiError('Failed to load departments. Check server connection or authentication.');
@@ -217,6 +273,11 @@ const AppointmentManagement = ({ onDataChange }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    // Prevent admins from changing the notes field
+    if (name === 'notes' && userRole === 'admin') {
+      console.warn('Admins cannot edit notes field at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -230,6 +291,7 @@ const AppointmentManagement = ({ onDataChange }) => {
     }
 
     if (name === 'dept') {
+      setFormData((prev) => ({ ...prev, doctor: '' }));
       loadDoctorsFiltered(value);
     }
   };
@@ -241,7 +303,7 @@ const AppointmentManagement = ({ onDataChange }) => {
       newErrors.patient = 'Patient is required';
     }
 
-    if (!formData.doctor) {
+    if (!formData.doctor && userRole !== 'admin') {
       newErrors.doctor = 'Doctor is required';
     }
 
@@ -287,13 +349,14 @@ const AppointmentManagement = ({ onDataChange }) => {
     try {
       const appointmentData = {
         patient: formData.patient,
-        doctor: formData.doctor,
+        doctor: formData.doctor || null,
         dept: formData.dept,
         date: formData.date,
         time: formData.time,
         status: formData.status,
         rsv: formData.rsv,
-        notes: formData.notes,
+        // Only include notes if user is a doctor
+        notes: userRole === 'doctor' ? formData.notes : editingAppointment?.notes || '',
       };
 
       if (editingAppointment) {
@@ -317,11 +380,16 @@ const AppointmentManagement = ({ onDataChange }) => {
       return;
     }
 
+    if (!appointment.patient || !appointment.dept) {
+      setApiError('Cannot edit appointment: Missing patient or department data.');
+      return;
+    }
+
     setEditingAppointment(appointment);
     setFormData({
-      patient: appointment.patient._id.toString(),
-      doctor: appointment.doctor._id.toString(),
-      dept: appointment.dept._id.toString(),
+      patient: appointment.patient?._id?.toString() || '',
+      doctor: appointment.doctor?._id?.toString() || '',
+      dept: appointment.dept?._id?.toString() || '',
       date: new Date(appointment.date).toISOString().split('T')[0],
       time: appointment.time,
       status: appointment.status,
@@ -329,6 +397,7 @@ const AppointmentManagement = ({ onDataChange }) => {
       notes: appointment.notes || '',
     });
     setShowForm(true);
+    loadDoctorsFiltered(appointment.dept?._id?.toString() || '');
   };
 
   const handleDelete = async (id) => {
@@ -363,26 +432,41 @@ const AppointmentManagement = ({ onDataChange }) => {
     setEditingAppointment(null);
     setShowForm(false);
     setErrors({});
+    setApiError(null);
+    if (userRole === 'admin') {
+      loadDoctors();
+    }
   };
 
-  const getPatientName = (patientId) => {
-    const patient = Array.isArray(patients) ? patients.find((p) => p._id === patientId) : null;
-    return patient ? patient.name : 'Unknown';
+  const getPatientName = (patient) => {
+    if (!patient || !patient._id) return 'Unknown Patient';
+    const patientRecord = Array.isArray(patients) ? patients.find((p) => p._id === patient._id) : null;
+    return patientRecord ? patientRecord.name : 'Unknown Patient';
   };
 
-  const getDoctorName = (doctorId) => {
-    const doctor = Array.isArray(doctors) ? doctors.find((d) => d._id === doctorId) : null;
-    return doctor ? doctor.name : 'Unknown';
+  const getDoctorName = (doctor) => {
+    if (!doctor || !doctor._id) return 'Unknown Doctor';
+    const doctorRecord = Array.isArray(doctors) ? doctors.find((d) => d._id === doctor._id) : null;
+    return doctorRecord ? doctorRecord.name : 'Unknown Doctor';
   };
 
-  const getDepartmentName = (departmentId) => {
-    const department = Array.isArray(departments) ? departments.find((dept) => dept._id === departmentId) : null;
-    return department ? department.dept : 'Unknown'; // Use 'dept' field as per schema
+  const getDepartmentName = (department) => {
+    if (!department || !department._id) return 'Unknown Department';
+    const departmentRecord = Array.isArray(departments) ? departments.find((dept) => dept._id === department._id) : null;
+    return departmentRecord ? departmentRecord.dept : 'Unknown Department';
   };
 
   const filteredAppointments = appointments.filter((appointment) => {
-    const patientName = getPatientName(appointment.patient._id).toLowerCase();
-    const doctorName = getDoctorName(appointment.doctor._id).toLowerCase();
+    if (userRole === 'doctor' && (!appointment.patient || !appointment.doctor || !appointment.dept)) {
+      console.warn('Skipping appointment with missing patient, doctor, or department:', appointment);
+      return false;
+    }
+    if (userRole !== 'doctor' && (!appointment.patient || !appointment.dept)) {
+      console.warn('Skipping appointment with missing patient or department:', appointment);
+      return false;
+    }
+    const patientName = getPatientName(appointment.patient).toLowerCase();
+    const doctorName = getDoctorName(appointment.doctor).toLowerCase();
     const search = searchTerm.toLowerCase();
     return (
       patientName.includes(search) ||
@@ -492,25 +576,29 @@ const AppointmentManagement = ({ onDataChange }) => {
 
                     <div className="form-row">
                       <div className="form-group">
-                        <label>Doctor *</label>
+                        <label>Doctor {userRole !== 'admin' ? '*' : '(Optional)'}</label>
                         <select
                           name="doctor"
                           value={formData.doctor}
                           onChange={handleInputChange}
                           className={errors.doctor ? 'error' : ''}
+                          disabled={formData.dept && doctors.length === 0}
                         >
                           <option value="">Select Doctor</option>
                           {Array.isArray(doctors) && doctors.length > 0 ? (
                             doctors
-                              .filter((doctor) => !formData.dept || (doctor.dept && doctor.dept.toString() === formData.dept.toString())) // Changed to 'dept'
+                              .filter((doctor) => {
+                                const deptId = doctor.dept?._id || doctor.dept;
+                                return !formData.dept || (deptId && deptId.toString() === formData.dept);
+                              })
                               .map((doctor) => (
                                 <option key={doctor._id} value={doctor._id}>
-                                  {doctor.name || 'Unnamed Doctor'} - {doctor.spec || doctor.specialty || 'N/A'} // Changed to 'spec'
+                                  {doctor.name || 'Unnamed Doctor'} - {doctor.spec || 'N/A'}
                                 </option>
                               ))
                           ) : (
                             <option value="" disabled>
-                              No doctors available for selected department
+                              No doctors available{formData.dept ? ' for selected department' : ''}
                             </option>
                           )}
                         </select>
@@ -568,13 +656,15 @@ const AppointmentManagement = ({ onDataChange }) => {
                     </div>
 
                     <div className="form-group full-width">
-                      <label>Notes</label>
+                      <label>Notes {userRole === 'admin' ? '(Read-Only)' : ''}</label>
                       <textarea
                         name="notes"
                         value={formData.notes}
                         onChange={handleInputChange}
                         rows="3"
-                        placeholder="Additional notes or symptoms..."
+                        placeholder={userRole === 'admin' ? 'Notes are read-only for admins' : 'Additional notes or symptoms...'}
+                        disabled={userRole === 'admin'}
+                        className={userRole === 'admin' ? 'disabled-textarea' : ''}
                       />
                     </div>
 
@@ -601,6 +691,7 @@ const AppointmentManagement = ({ onDataChange }) => {
                     <th>Date</th>
                     <th>Time</th>
                     <th>Reason</th>
+                    <th>Notes</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -609,12 +700,18 @@ const AppointmentManagement = ({ onDataChange }) => {
                   {Array.isArray(filteredAppointments) && filteredAppointments.length > 0 ? (
                     filteredAppointments.map((appointment) => (
                       <tr key={appointment._id}>
-                        <td>{getPatientName(appointment.patient._id)}</td>
-                        <td>{getDoctorName(appointment.doctor._id)}</td>
-                        <td>{getDepartmentName(appointment.dept._id)}</td>
+                        <td>{getPatientName(appointment.patient)}</td>
+                        <td>
+                          {getDoctorName(appointment.doctor)}
+                          {userRole === 'admin' && !appointment.doctor && (
+                            <span className="warning-badge" title="Missing doctor reference">⚠️</span>
+                          )}
+                        </td>
+                        <td>{getDepartmentName(appointment.dept)}</td>
                         <td>{new Date(appointment.date).toISOString().split('T')[0]}</td>
                         <td>{appointment.time}</td>
                         <td>{appointment.rsv}</td>
+                        <td>{appointment.notes || 'No notes'}</td>
                         <td>
                           <span className={`status-badge ${appointment.status.toLowerCase()}`}>
                             {appointment.status}
@@ -623,16 +720,10 @@ const AppointmentManagement = ({ onDataChange }) => {
                         <td>
                           {isAuthenticated && (
                             <div className="action-buttons">
-                              <button
-                                className="edit-button"
-                                onClick={() => handleEdit(appointment)}
-                              >
+                              <button className="edit-button" onClick={() => handleEdit(appointment)}>
                                 ✏️
                               </button>
-                              <button
-                                className="delete-button"
-                                onClick={() => handleDelete(appointment._id)}
-                              >
+                              <button className="delete-button" onClick={() => handleDelete(appointment._id)}>
                                 🗑️
                               </button>
                             </div>
@@ -642,7 +733,7 @@ const AppointmentManagement = ({ onDataChange }) => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="8">No appointments available</td>
+                      <td colSpan="9">No appointments available</td>
                     </tr>
                   )}
                 </tbody>

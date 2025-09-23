@@ -25,7 +25,7 @@ const DepartmentManagement = ({ onDataChange }) => {
         fetch('http://localhost:5000/api/departments', {
           headers: { 'Authorization': token ? `Bearer ${token}` : '' },
         }),
-        fetch('http://localhost:5000/api/doctors', {
+        fetch('http://localhost:5000/api/users/doctors', {
           headers: { 'Authorization': token ? `Bearer ${token}` : '' },
         }),
         fetch('http://localhost:5000/api/appointments', {
