@@ -221,7 +221,7 @@ const AdminDashboard = ({ onLogout }) => {
       case 'patients':
         return (
           <div className="patients-list">
-            <h2>Patient Management</h2>
+            
             {loading && <p>Loading patients...</p>}
             {error && (
               <div>
@@ -242,7 +242,6 @@ const AdminDashboard = ({ onLogout }) => {
       case 'doctors':
         return (
           <div className="doctors-list">
-            <h2>Doctor Management</h2>
             {loading && <p>Loading doctors...</p>}
             {error && (
               <div>
@@ -263,7 +262,7 @@ const AdminDashboard = ({ onLogout }) => {
       case 'departments':
         return (
           <div className="departments-list">
-            <h2>Department Management</h2>
+            
             {loading && <p>Loading departments...</p>}
             {error && (
               <div>

@@ -44,6 +44,7 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
     if (!formData.age || formData.age < 1 || formData.age > 120) newErrors.age = 'Please enter a valid age (1-120)';
     if (!formData.address.trim()) newErrors.address = 'Address is required';
     if (!formData.emerno.trim()) newErrors.emerno = 'Emergency contact is required';
+    if(!formData.emerno.trim() || !/^\+?[\d\s\-\(\)]+$/.test(formData.emerno)) newErrors.emerno = 'Please enter a valid emergency contact number';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
