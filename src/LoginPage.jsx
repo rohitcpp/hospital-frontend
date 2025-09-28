@@ -5,7 +5,7 @@ const LoginPage = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: 'doctor' 
+    role: 'doctor'
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -67,21 +67,40 @@ const LoginPage = ({ onLoginSuccess }) => {
           role: formData.role,
         }),
       });
+      console.log('Response status:', response.status);
       const text = await response.text();
       let data;
       try {
         data = JSON.parse(text);
-        console.log('Parsed response data:', data);
+        console.log('Parsed response data:', JSON.stringify(data, null, 2));
       } catch (e) {
-        data = { message: `Invalid response: ${text || 'No data'}` };
         console.error('Failed to parse response:', text, e);
+        setErrors({ submit: `Invalid server response: ${text || 'No data'}` });
+        data = { message: `Invalid response: ${text || 'No data'}` };
       }
       console.log('Login response:', { status: response.status, data });
 
       if (response.ok && data.success) {
+        // Check if the user is a doctor (using response role)
+        if (data.role.toLowerCase() === 'doctor' && data.user && data.user.status?.toLowerCase() !== 'active') {
+          setErrors({ submit: 'You are not an active doctor. Please contact admin.' });
+          console.log('Login failed: Doctor is not active', {
+            user: data.user,
+            status: data.user?.status
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        // Warn if backend doesn't enforce status check for doctors
+        if (data.role.toLowerCase() === 'doctor' && !data.user) {
+          console.warn('Backend did not provide user data with status. Inactive doctors may be able to log in. Update /api/auth/login to check status and include user.status in response.');
+        }
+
+        // Proceed with login for active doctors or other roles
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userEmail', formData.email);
-        localStorage.setItem('userRole', formData.role);
+        localStorage.setItem('userRole', data.role || formData.role); // Prefer backend role
         if (data.token) {
           localStorage.setItem('token', data.token);
         }
@@ -97,8 +116,8 @@ const LoginPage = ({ onLoginSuccess }) => {
         console.log('Login failed with message:', data.message);
       }
     } catch (error) {
-      console.error('Fetch error:', error.message);
-      setErrors({ submit: 'Login failed due to a network error. Please try again.' });
+      console.error('Fetch error:', error.message, error);
+      setErrors({ submit: 'Login failed due to a network error. Please check your connection and try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -111,7 +130,7 @@ const LoginPage = ({ onLoginSuccess }) => {
           <div className="login-header">
             <div className="hospital-logo">
               <div className="logo-icon">🏥</div>
-              <h1>HealthCare </h1>
+              <h1>HealthCare</h1>
             </div>
             <p className="login-subtitle">Welcome back! Please sign in to your account</p>
           </div>
@@ -173,13 +192,12 @@ const LoginPage = ({ onLoginSuccess }) => {
                 <span className="checkmark"></span>
                 Remember me
               </label>
-              
             </div>
 
             {errors.submit && <div className="error-message submit-error">{errors.submit}</div>}
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className={`login-button ${isLoading ? 'loading' : ''}`}
               disabled={isLoading}
             >
@@ -193,8 +211,6 @@ const LoginPage = ({ onLoginSuccess }) => {
               )}
             </button>
           </form>
-
-          
         </div>
       </div>
     </div>

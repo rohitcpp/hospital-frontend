@@ -302,7 +302,7 @@ const DoctorManagement = ({ onDataChange }) => {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
+  /*const handleDelete = async (id) => {
     if (!isAuthenticated) {
       setApiError('Please log in to delete doctors.');
       return;
@@ -322,7 +322,7 @@ const DoctorManagement = ({ onDataChange }) => {
         setApiError(error.response?.data.message || 'Failed to delete doctor.');
       }
     }
-  };
+  };*/
 
   const resetForm = () => {
     setFormData({
@@ -567,9 +567,9 @@ const DoctorManagement = ({ onDataChange }) => {
                               <button className="edit-button" onClick={() => handleEdit(doctor)}>
                                 ✏️
                               </button>
-                              <button className="delete-button" onClick={() => handleDelete(doctor.id)}>
+                              {/*<button className="delete-button" onClick={() => handleDelete(doctor.id)}>
                                 🗑️
-                              </button>
+                              </button>*/}
                             </div>
                           )}
                         </td>

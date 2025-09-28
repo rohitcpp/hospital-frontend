@@ -11,6 +11,7 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
     age: '',
     gender: 'Male',
     address: '',
+    status: 'active',
     bg: 'A+', 
     emerno: '',
     medical_history: ''
@@ -69,6 +70,7 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
         gender: formData.gender.toLowerCase(),
         bg: formData.bg || 'A+', 
         address: formData.address?.trim() || undefined,
+        status: formData.status || 'active',
         emerno: formData.emerno?.trim() || undefined,
         medical_history: formData.medical_history?.trim() || undefined,
       };
@@ -116,30 +118,12 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
       age: patient.age,
       gender: patient.gender,
       address: patient.address,
+      status: patient.status,
       bg: patient.bg,
       emerno: patient.emerno,
       medical_history: patient.medical_history || ''
     });
     setShowForm(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this patient?')) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/patients/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        onDataChange(token); 
-      } catch (error) {
-        console.error('Error deleting patient:', error.message);
-        setErrors({ general: `Failed to delete patient: ${error.message}` });
-      }
-    }
   };
 
   const resetForm = () => {
@@ -150,6 +134,7 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
       age: '',
       gender: 'Male',
       address: '',
+      status: 'active',
       bg: 'A+', 
       emerno: '',
       medical_history: ''
@@ -169,13 +154,15 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
     <div className="management-container">
       <div className="management-header">
         <h2>Patient Management</h2>
-        <button 
-          className="add-button"
-          onClick={() => setShowForm(true)}
-        >
-          <span className="btn-icon">➕</span>
-          Add New Patient
-        </button>
+        {userRole !== 'doctor' && (
+          <button 
+            className="add-button"
+            onClick={() => setShowForm(true)}
+          >
+            <span className="btn-icon">➕</span>
+            Add New Patient
+          </button>
+        )}
       </div>
 
       <div className="search-bar">
@@ -188,7 +175,7 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
         />
       </div>
 
-      {showForm && (
+      {showForm && userRole !== 'doctor' && (
         <div className="form-modal">
           <div className="form-container">
             <div className="form-header">
@@ -283,7 +270,7 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
                   </select>
                 </div>
               </div>
-
+              <div className="form-row">
               <div className="form-group">
                 <label>Address *</label>
                 <textarea
@@ -294,6 +281,19 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
                   className={errors.address ? 'error' : ''}
                 />
                 {errors.address && <span className="error-message">{errors.address}</span>}
+              </div>
+
+              <div className="form-group">
+                  <label>Status</label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                  >
+                    <option value="active">Active</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
               </div>
 
               <div className="form-group">
@@ -343,8 +343,8 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
               <th>Age</th>
               <th>Gender</th>
               <th>Blood Group</th>
-              <th>Registration Date</th>
-              <th>Actions</th>
+              <th>Status</th>
+              {userRole !== 'doctor' && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -356,24 +356,23 @@ const PatientManagement = ({ patients, onDataChange, token, userRole }) => {
                 <td>{patient.age}</td>
                 <td>{patient.gender}</td>
                 <td>{patient.bg}</td>
-                <td>{patient.createdAt ? new Date(patient.createdAt).toLocaleDateString() : 'N/A'}</td>
                 <td>
-                  <div className="action-buttons">
-                    <button 
-                      className="edit-button"
-                      onClick={() => handleEdit(patient)}
-                    >
-                      ✏️
-                    </button>
-                    <button 
-                      className="delete-button"
-                      onClick={() => handleDelete(patient._id)}
-                      disabled={userRole === 'doctor'} 
-                    >
-                      🗑️
-                    </button>
-                  </div>
+                  <span className={`status-badge ${patient.status}`}>
+                    {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
+                  </span>
                 </td>
+                {userRole !== 'doctor' && (
+                  <td>
+                    <div className="action-buttons">
+                      <button 
+                        className="edit-button"
+                        onClick={() => handleEdit(patient)}
+                      >
+                        ✏️
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

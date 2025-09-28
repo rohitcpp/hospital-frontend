@@ -74,7 +74,7 @@ const AppointmentManagement = ({ onDataChange }) => {
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-      console.log('Request to', config.url, 'at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), 'with token:', !!token);
+      console.log('Request to', config.url, 'with params:', config.params, 'at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
       return config;
     },
     (error) => {
@@ -186,71 +186,33 @@ const AppointmentManagement = ({ onDataChange }) => {
       console.log('Doctors response at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', response.data);
       const doctorsData = Array.isArray(response.data) ? response.data : Array.isArray(response.data.data) ? response.data.data : [];
       const validDoctors = doctorsData.filter((doctor) => {
-        const deptId = doctor.dept?._id || doctor.dept;
+        const deptId = doctor.dept?._id || doctor.dept || doctor.department?._id || doctor.department || doctor.deptId;
         if (!deptId) {
           console.warn('Skipping doctor with invalid dept:', doctor);
+          return false;
+        }
+        const isActive = doctor.status?.toLowerCase() === 'active' || doctor.isActive === true || !doctor.status;
+        if (!isActive) {
+          console.warn('Skipping inactive doctor:', doctor);
           return false;
         }
         if (userRole === 'doctor' && doctor._id !== currentUserId) {
           console.warn('Skipping doctor for non-current user:', doctor, 'Current user ID:', currentUserId);
           return false;
         }
+        console.log('Valid doctor:', doctor);
         return true;
       });
       if (validDoctors.length === 0) {
-        console.warn('No valid doctors found at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
-        setApiError('No valid doctors found. Please add doctors with valid departments in Doctor Management.');
+        console.warn('No valid active doctors found at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+        setApiError('No valid active doctors found. Please add active doctors with valid departments in Doctor Management.');
+      } else {
+        setApiError(null);
       }
       setDoctors(validDoctors);
-      setApiError(null);
     } catch (error) {
       console.error('Error fetching doctors at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', error.response?.data || error);
       setApiError('Failed to load doctors. Check server connection or authentication.');
-    }
-  };
-
-  const loadDoctorsFiltered = async (departmentId) => {
-    if (!departmentId) {
-      await loadDoctors();
-      return;
-    }
-    try {
-      const response = await axiosInstance.get('/users/doctors', {
-        params: { departmentId },
-      });
-      console.log('Filtered doctors response at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), 'for departmentId', departmentId, ':', response.data);
-      const doctorsData = Array.isArray(response.data) ? response.data : Array.isArray(response.data.data) ? response.data.data : [];
-      const validDoctors = doctorsData.filter((doctor) => {
-        const deptId = doctor.dept?._id || doctor.dept;
-        if (!deptId) {
-          console.warn('Skipping doctor with invalid dept:', doctor);
-          return false;
-        }
-        if (deptId.toString() !== departmentId) {
-          console.warn('Skipping doctor with non-matching dept:', doctor, 'Expected dept:', departmentId);
-          return false;
-        }
-        if (userRole === 'doctor' && doctor._id !== currentUserId) {
-          console.warn('Skipping doctor for non-current user:', doctor, 'Current user ID:', currentUserId);
-          return false;
-        }
-        return true;
-      });
-      if (validDoctors.length === 0) {
-        console.warn('No valid doctors found for department', departmentId, 'at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
-        setApiError(`No valid doctors available for selected department. Please select another department or add doctors in Doctor Management.`);
-      }
-      setDoctors(validDoctors);
-      setApiError(null);
-    } catch (error) {
-      console.error('Error fetching filtered doctors at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), 'for departmentId', departmentId, ':', error.response?.data || error);
-      const errorMessage = error.response?.status === 400
-        ? `Invalid department ID ${departmentId}. Please select a valid department.`
-        : `Failed to load doctors for department ${departmentId}. Check server or authentication.`;
-      setApiError(errorMessage);
-      if (!doctors.length) {
-        await loadDoctors();
-      }
     }
   };
 
@@ -273,11 +235,11 @@ const AppointmentManagement = ({ onDataChange }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    // Prevent admins from changing the notes field
     if (name === 'notes' && userRole === 'admin') {
       console.warn('Admins cannot edit notes field at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
       return;
     }
+    console.log('Input changed:', name, value);
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -292,7 +254,6 @@ const AppointmentManagement = ({ onDataChange }) => {
 
     if (name === 'dept') {
       setFormData((prev) => ({ ...prev, doctor: '' }));
-      loadDoctorsFiltered(value);
     }
   };
 
@@ -396,25 +357,6 @@ const AppointmentManagement = ({ onDataChange }) => {
       notes: appointment.notes || '',
     });
     setShowForm(true);
-    loadDoctorsFiltered(appointment.dept?._id?.toString() || '');
-  };
-
-  const handleDelete = async (id) => {
-    if (!isAuthenticated) {
-      setApiError('Please log in to delete appointments.');
-      return;
-    }
-
-    if (window.confirm('Are you sure you want to delete this appointment?')) {
-      try {
-        await axiosInstance.delete(`/appointments/${id}`);
-        loadAppointments();
-        setApiError(null);
-      } catch (error) {
-        console.error('Error deleting appointment at', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ':', error.response?.data || error);
-        setApiError(error.response?.data.message || 'Failed to delete appointment.');
-      }
-    }
   };
 
   const resetForm = () => {
@@ -534,14 +476,16 @@ const AppointmentManagement = ({ onDataChange }) => {
                         >
                           <option value="">Select Patient</option>
                           {Array.isArray(patients) && patients.length > 0 ? (
-                            patients.map((patient) => (
-                              <option key={patient._id} value={patient._id}>
-                                {patient.name} - {patient.email}
-                              </option>
-                            ))
+                            patients
+                              .filter((patient) => patient.status === 'active')
+                              .map((patient) => (
+                                <option key={patient._id} value={patient._id}>
+                                  {patient.name} - {patient.email}
+                                </option>
+                              ))
                           ) : (
                             <option value="" disabled>
-                              No patients available
+                              No active patients available
                             </option>
                           )}
                         </select>
@@ -575,20 +519,20 @@ const AppointmentManagement = ({ onDataChange }) => {
 
                     <div className="form-row">
                       <div className="form-group">
-                        <label>Doctor {userRole !== 'admin' ? '*' : '(Optional)'}</label>
+                        <label>Doctor {userRole !== 'admin' ? '*' : ''}</label>
                         <select
                           name="doctor"
                           value={formData.doctor}
                           onChange={handleInputChange}
                           className={errors.doctor ? 'error' : ''}
-                          disabled={formData.dept && doctors.length === 0}
+                          disabled={!formData.dept || doctors.length === 0}
                         >
                           <option value="">Select Doctor</option>
                           {Array.isArray(doctors) && doctors.length > 0 ? (
                             doctors
                               .filter((doctor) => {
-                                const deptId = doctor.dept?._id || doctor.dept;
-                                return !formData.dept || (deptId && deptId.toString() === formData.dept);
+                                const deptId = doctor.dept?._id || doctor.dept || doctor.department?._id || doctor.department || doctor.deptId;
+                                return !formData.dept || (deptId && deptId.toString() === formData.dept.toString());
                               })
                               .map((doctor) => (
                                 <option key={doctor._id} value={doctor._id}>
@@ -597,7 +541,15 @@ const AppointmentManagement = ({ onDataChange }) => {
                               ))
                           ) : (
                             <option value="" disabled>
-                              No doctors available{formData.dept ? ' for selected department' : ''}
+                              No active doctors available{formData.dept ? ' for selected department' : ''}
+                            </option>
+                          )}
+                          {Array.isArray(doctors) && doctors.filter((doctor) => {
+                            const deptId = doctor.dept?._id || doctor.dept || doctor.department?._id || doctor.department || doctor.deptId;
+                            return !formData.dept || (deptId && deptId.toString() === formData.dept.toString());
+                          }).length === 0 && formData.dept && (
+                            <option value="" disabled>
+                              No active doctors available for selected department
                             </option>
                           )}
                         </select>
@@ -721,9 +673,6 @@ const AppointmentManagement = ({ onDataChange }) => {
                             <div className="action-buttons">
                               <button className="edit-button" onClick={() => handleEdit(appointment)}>
                                 ✏️
-                              </button>
-                              <button className="delete-button" onClick={() => handleDelete(appointment._id)}>
-                                🗑️
                               </button>
                             </div>
                           )}
